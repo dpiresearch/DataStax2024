@@ -40,18 +40,11 @@ if ("file" not in st.session_state):
             file.write(uploaded_file.read())
 
         documents = LlamaParse(result_type="markdown").load_data(local_file_path)
-        # documents = LlamaParse(result_type="markdown").load_data("./docs/examples/data/DMV/dmv.pdf")
-        # st.experimental_rerun()
-        # else:
-        #     st.stop()
-        # print(documents[0].text[6000:7000])
-
 
         node_parser = MarkdownElementNodeParser(llm=OpenAI(model="gpt-3.5-turbo-0613"), num_workers=8)
 
         nodes = node_parser.get_nodes_from_documents(documents)
         base_nodes, node_mapping = node_parser.get_base_nodes_and_mappings(nodes)
-
 
         ctx = ServiceContext.from_defaults(
             llm=OpenAI(model="gpt-4"),
@@ -62,7 +55,6 @@ if ("file" not in st.session_state):
         recursive_index = VectorStoreIndex(nodes=base_nodes, service_context=ctx)
         raw_index = VectorStoreIndex.from_documents(documents, service_context=ctx)
 
-
         retriever = RecursiveRetriever(
             "vector",
             retriever_dict={
@@ -70,7 +62,6 @@ if ("file" not in st.session_state):
             },
             node_dict=node_mapping,
         )
-
 
         reranker = SentenceTransformerRerank(top_n=5, model="BAAI/bge-reranker-large")
 
@@ -82,6 +73,7 @@ if ("file" not in st.session_state):
         st.session_state["file"] = local_file_path
         st.session_state["rqe"] = recursive_query_engine
         print("Defined recursive_query_engine and set sessionstate file")
+
 query = st.text_input('Ask your question')
 clicked = st.button('Ask')
 if clicked:
@@ -146,15 +138,14 @@ if clicked:
     search_str = response.choices[0].message.content
     print("Summary small: " + str(search_str))
 
-#    search_string='California DMV ' + search_str
     search_string=search_str
     url_friendly_string = make_url_friendly(search_string)
     print(url_friendly_string)
 
     import requests
-
+    GOOGLE_YOUTUBE_API_KEY=os.environ["GOOGLE_YOUTUBE_API_KEY"]
     # The URL you want to send the GET request to
-    url = 'https://youtube.googleapis.com/youtube/v3/search?part=snippet&maxResults=25&q='+url_friendly_string+'&key=AIzaSyDnRyiGdn8t7ZCvcIqJOYcfFcQFcJAx0Gs'
+    url = 'https://youtube.googleapis.com/youtube/v3/search?part=snippet&maxResults=25&q='+url_friendly_string+'&key='+GOOGLE_YOUTUBE_API_KEY
 
     # Headers including the Authorization with the API key and the content type
     headers = {
