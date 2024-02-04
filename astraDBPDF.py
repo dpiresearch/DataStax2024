@@ -8,8 +8,16 @@ from llama_index.embeddings import OpenAIEmbedding
 from llama_index.retrievers import RecursiveRetriever
 from llama_index.query_engine import RetrieverQueryEngine
 from llama_index.postprocessor import SentenceTransformerRerank
+from llama_index.vector_stores import AstraDBVectorStore
+from llama_index.llama_dataset import download_llama_dataset
+from dotenv import load_dotenv
 
 from llama_index.llms import OpenAI
+from llama_index import (
+    VectorStoreIndex,
+    SimpleDirectoryReader,
+    StorageContext,
+)
 
 
 API_KEY=os.environ["LLAMA_INDEX_API_KEY"]
@@ -52,8 +60,30 @@ if ("file" not in st.session_state):
             chunk_size=512
         )
 
+        #
+        # START ASTRADB
+        #
+        ASTRA_DB_APP_TOKEN = os.environ["ASTRA_DB_APP_TOKEN"]
+        ASTRA_DB_API_ENDPOINT = os.environ["ASTRA_DB_API_ENDPOINT"]
+        astra_db_store = AstraDBVectorStore(
+            token=ASTRA_DB_APP_TOKEN,
+            api_endpoint=ASTRA_DB_API_ENDPOINT,
+            collection_name="llama_parse",
+            embedding_dimension=1536,
+        )
+
+        storage_context = StorageContext.from_defaults(vector_store=astra_db_store)
+
+        index = VectorStoreIndex.from_documents(
+            documents, storage_context=storage_context
+        )
+
+        raw_index = VectorStoreIndex.from_documents(documents, service_context=ctx, storage_context=storage_context)
+        #
+        # END ASTRADB
+        #
         recursive_index = VectorStoreIndex(nodes=base_nodes, service_context=ctx)
-        raw_index = VectorStoreIndex.from_documents(documents, service_context=ctx)
+        # raw_index = VectorStoreIndex.from_documents(documents, service_context=ctx)
 
         retriever = RecursiveRetriever(
             "vector",
@@ -72,11 +102,18 @@ if ("file" not in st.session_state):
 
         st.session_state["file"] = local_file_path
         st.session_state["rqe"] = recursive_query_engine
+        st.session_state["rawqe"] = recursive_query_engine
         print("Defined recursive_query_engine and set sessionstate file")
 
 query = st.text_input('Ask your question')
 clicked = st.button('Ask')
 if clicked:
+    
+    raw_query_engine=st.session_state["rawqe"]
+    response_1 = raw_query_engine.query(query)
+    print("\n***********New LlamaParse+ Basic Query Engine***********")
+    print(response_1)
+
     recursive_query_engine=st.session_state["rqe"]
     response_2 = recursive_query_engine.query(query)
     print("\n***********New LlamaParse+ Recursive Retriever Query Engine***********")
