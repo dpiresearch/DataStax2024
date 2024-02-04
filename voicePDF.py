@@ -90,6 +90,38 @@ if clicked:
     print("\n***********New LlamaParse+ Recursive Retriever Query Engine***********")
     print(response_2)
     response_2.response
+
+    import requests
+
+    # The URL to which the POST request is made
+    url = 'https://xtts-yiut-322ce7e8.mt-guc1.bentoml.ai/synthesize'
+
+    # The headers for the POST request
+    headers = {
+        'Content-Type': 'application/json',
+    }
+
+    # The JSON data to be sent with the POST request
+    data = {
+        "lang": "en",
+        "text": response_2.response
+    }
+
+    # Make the POST request and receive the response
+    response = requests.post(url, json=data, headers=headers)
+
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Write the content of the response (binary data) to an MP3 file
+        with open('Output.mp3', 'wb') as file:
+            file.write(response.content)
+        print("The audio was successfully saved to Output.mp3")
+    else:
+        print(f"Failed to retrieve audio. Status code: {response.status_code}")
+
+    from elevenlabs import generate, play
+    play(response.content)
+
     result=""
     query_string = "Summarize the following text in less than 5 words: " + str(response_2)
 
